@@ -1,0 +1,306 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "winbgi2.h"
+#include <time.h> 
+#define liczba_całkowita int
+#define animuj animate
+#define liczba_zmiennoprzecinkowa float 
+#define stała const
+#define typ_logiczny bool
+#define dla for
+#define zwróć return
+#define w_przypadku_gdy if
+#define statyczny static
+#define znak char
+#define w_przeciwnym_razie else
+#define w_chwili_gdy while
+#define nic void
+#define wylosuj rand
+#define wylosuj_ziarno srand
+#define ustaw_port_widzenia setviewport
+#define wyczyść_port_widzenia clearviewport
+#define wypisz_tekst_na_kordynatach_x_oraz_y outtextxy
+#define pierwiastek_kwadratowy sqrt
+#define kontynuj continue
+#define linia line
+#define stwórz_pole_graficzne graphics
+#define koło circle
+stała liczba_całkowita liczba_maksymalna = 1e7 + 2; // 
+stała liczba_całkowita n = 49;// ilośc piłek bazowo 49, piłki numerowane od 1 do liczby tu podanej
+liczba_zmiennoprzecinkowa x[n]; // położenie piłek w x
+liczba_zmiennoprzecinkowa y[n]; // położenie piłek w y
+liczba_całkowita pozycja_maksymalna_ściany =950; // położenie prawej ściany oraz dolnej ściany
+liczba_całkowita pozycja_minimalna_ściany = 150; // położenie lewej ściany oraz górnej ściany
+liczba_zmiennoprzecinkowa prędkośćx[n]; //wartości prędkości w x piłeczek
+liczba_zmiennoprzecinkowa prędkośćy[n]; // wartości prędkości w y piłeczek
+liczba_całkowita wielkość_otworu=12; // wielkosć otworu na piłeczki
+liczba_zmiennoprzecinkowa prędkość_maksymalna = 10.0; // maksymalna prędkość piłek przy losowaniu, wpływa jedynie na prędkosć bazową
+liczba_zmiennoprzecinkowa wielkość = 20.0; // wielkośc piłeczek
+typ_logiczny w_przypadku_gdy_dmuchawa = 0; // czy dmuchawa jest odpalona
+typ_logiczny w_przypadku_gdy_otwarte = 0; // czy otwór jest otwarty
+liczba_zmiennoprzecinkowa moc_dmuchawy = 3000; // moc dmuchawy, im mniej tym dmuchawa jest mocniejsza
+liczba_zmiennoprzecinkowa grawitacja = 0.03;   // 0.1 jest giga cool dla 10// dla 1,
+liczba_zmiennoprzecinkowa utrata_energii = 0.80; // zachowanie energi //0.60 jest giga cool
+typ_logiczny zamróź[n]; //czy dane piłki zostały wylosowane
+liczba_całkowita pozycja_na_zewnatz=pozycja_minimalna_ściany; // pozycja piłek po wylosowaniu
+liczba_całkowita ilość_piłek=0; // ilośc wylosowanych piłek w losowaniu
+typ_logiczny checkdlaoverlap(liczba_całkowita i) // funkcja sprawdzająca czy piłka nachodzi na inną piłke, używana przy początkowym losowaniu piłek
+{
+	dla(liczba_całkowita j=0;j<i;j++)
+	{
+		liczba_zmiennoprzecinkowa L = pierwiastek_kwadratowy((x[i] - x[j]) * (x[i] - x[j]) + (y[i] - y[j]) * (y[i] - y[j])); // odległość pomiędzy piłkami
+		w_przypadku_gdy (L < wielkość*2.0 && L != 0.0) // wykryto kolizje
+		{ 
+			zwróć 1;
+		}
+	}
+	zwróć 0;
+}
+stała znak* liczba_całkowita_to_string(liczba_całkowita value) // funkcja używana do zmiany z liczba_całkowita na stała znak*
+{ 
+    statyczny znak buffer[20];
+    sprintf(buffer, "%d", value);
+    zwróć buffer;
+}
+nic odbij(liczba_całkowita i, liczba_całkowita j) // funkcja do odbijania piłek od siebie
+{
+	y[i]-=prędkośćy[i];
+	x[i]-=prędkośćx[i];
+	y[j]-=prędkośćy[j];
+	x[j]-=prędkośćx[j];
+	// Obliczanie odległość między piłkami
+	liczba_zmiennoprzecinkowa dx = x[j] - x[i];
+	liczba_zmiennoprzecinkowa dy = y[j] - y[i];
+	liczba_zmiennoprzecinkowa odległość = pierwiastek_kwadratowy(dx * dx + dy * dy);
+	// Wektor jednostkowy normalny (oś zderzenia)
+	liczba_zmiennoprzecinkowa nx = dx / odległość;
+	liczba_zmiennoprzecinkowa ny = dy / odległość;
+	// Wektor jednostkowy styczny (prostopadły do normalnego)
+	liczba_zmiennoprzecinkowa tx = -ny;
+	liczba_zmiennoprzecinkowa ty = nx;
+	// Rozkład prędkości na składowe normalne i styczne
+	liczba_zmiennoprzecinkowa v1n = prędkośćx[i] * nx + prędkośćy[i] * ny;
+	liczba_zmiennoprzecinkowa v1t = prędkośćx[i] * tx + prędkośćy[i] * ty;
+	liczba_zmiennoprzecinkowa v2n = prędkośćx[j] * nx + prędkośćy[j] * ny;
+	liczba_zmiennoprzecinkowa v2t = prędkośćx[j] * tx + prędkośćy[j] * ty;
+	// Zamiana składowych normalnych między piłkami (zachowanie pędu)
+	liczba_zmiennoprzecinkowa v1n_new = v2n;
+	liczba_zmiennoprzecinkowa v2n_new = v1n;
+	// Składowe styczne pozostają bez zmian
+	liczba_zmiennoprzecinkowa v1t_new = v1t;
+	liczba_zmiennoprzecinkowa v2t_new = v2t;
+	// Przekształcenie nowych składowych z powrotem do układu globalnego
+	prędkośćx[i] = v1n_new * nx + v1t_new * tx;
+	prędkośćy[i] = v1n_new * ny + v1t_new * ty;
+	prędkośćx[j] = v2n_new * nx + v2t_new * tx;
+	prędkośćy[j] = v2n_new * ny + v2t_new * ty;
+	y[i]+=prędkośćy[i];
+	x[i]+=prędkośćx[i];
+	y[j]+=prędkośćy[j];
+	x[j]+=prędkośćx[j];
+}
+nic dmuchawa(liczba_całkowita i)
+{
+	prędkośćy[i]+=((((pozycja_minimalna_ściany+pozycja_maksymalna_ściany)/2)-y[i]))/moc_dmuchawy;
+	prędkośćx[i]+=((((pozycja_minimalna_ściany+pozycja_maksymalna_ściany)/2)-x[i]))/moc_dmuchawy;
+}
+
+typ_logiczny checkdlacollisions(liczba_całkowita i)
+{
+	liczba_całkowita odbicie_wystąpiło=0;
+	w_przypadku_gdy(zamróź[i]) zwróć 0;
+	dla(liczba_całkowita j = i + 1; j < n; j++) 
+	{
+		w_przypadku_gdy(zamróź[j]) kontynuj;
+		liczba_zmiennoprzecinkowa L = pierwiastek_kwadratowy((x[i] - x[j]) * (x[i] - x[j]) + (y[i] - y[j]) * (y[i] - y[j])); // odległość pomiędzy piłkami
+		w_przypadku_gdy (L < wielkość*2.0 && L != 0.0) // wykryto kolizje pomiędzy piłkami
+		{ 
+			odbij(i, j);
+			odbicie_wystąpiło==1;
+		}
+	}
+	zwróć odbicie_wystąpiło;
+	
+}
+
+nic generateprędkość() //generowanie prędkości na początku
+{
+	dla(liczba_całkowita i = 0; i < n; i++) 
+	{
+		prędkośćx[i] = (((wylosuj() % (liczba_całkowita)prędkość_maksymalna * 2) - (prędkość_maksymalna / 2)) / prędkość_maksymalna)*2;
+		prędkośćy[i] = -0.7*abs((((wylosuj() % (liczba_całkowita)prędkość_maksymalna * 2) - (prędkość_maksymalna / 2)) / prędkość_maksymalna)*2+1);
+	}
+}
+nic wygeneruj_pojedyńczą_pozycje(liczba_całkowita i)// funkcja do generowania pozycji pojedyńczej piłeczki 
+{
+	x[i] = (wylosuj() % (pozycja_maksymalna_ściany-pozycja_minimalna_ściany))+pozycja_minimalna_ściany;
+	y[i] = (wylosuj() % (pozycja_maksymalna_ściany-pozycja_minimalna_ściany))+pozycja_minimalna_ściany;
+}
+nic wygeneruj_pozycje()// funkcja do generowania pozycji wszystkich piłek
+{
+	dla(liczba_całkowita i = 0; i < n; i++)
+		{
+			wygeneruj_pojedyńczą_pozycje(i);
+			w_chwili_gdy(checkdlaoverlap(i))
+			{
+				wygeneruj_pojedyńczą_pozycje(i);
+			}
+		}
+}
+nic odbicie_od_ściany(liczba_całkowita i)
+{
+	w_przypadku_gdy(w_przypadku_gdy_otwarte==0)
+	{
+		w_przypadku_gdy (y[i] + prędkośćy[i] < pozycja_minimalna_ściany) //odbicie od góry 
+		{
+			prędkośćy[i] = prędkośćy[i] * -1.0 * (utrata_energii);
+				prędkośćx[i] = prędkośćx[i] * utrata_energii;
+				liczba_całkowita g = pozycja_minimalna_ściany + (prędkośćy[i] - (y[i] - pozycja_minimalna_ściany)) - prędkośćy[i];
+				y[i] = g;
+		}
+	}
+	w_przeciwnym_razie 
+	{
+		w_przypadku_gdy((y[i] + prędkośćy[i] < pozycja_minimalna_ściany &&(x[i]+prędkośćx[i])<((pozycja_maksymalna_ściany + pozycja_minimalna_ściany)/2)-wielkość_otworu*wielkość)||(y[i] + prędkośćy[i] < pozycja_minimalna_ściany &&(x[i]+prędkośćx[i])>((pozycja_maksymalna_ściany + pozycja_minimalna_ściany)/2)+wielkość_otworu*wielkość)) 
+		{
+			prędkośćy[i] = prędkośćy[i] * -1.0 * (utrata_energii);
+			prędkośćx[i] = prędkośćx[i] * utrata_energii;
+			liczba_całkowita g = pozycja_minimalna_ściany + (prędkośćy[i] - (y[i] - pozycja_minimalna_ściany)) - prędkośćy[i];
+			y[i] = g;
+		}
+	}
+	w_przypadku_gdy (y[i] + prędkośćy[i] > pozycja_maksymalna_ściany) //odbicie od dołu
+	{
+		prędkośćy[i] = prędkośćy[i] * -1.0 * (utrata_energii);
+		prędkośćx[i] = prędkośćx[i] * utrata_energii;
+		liczba_całkowita g = pozycja_maksymalna_ściany + (prędkośćy[i] - (y[i] - pozycja_maksymalna_ściany)) - prędkośćy[i];
+		y[i] = g;
+	}
+	w_przypadku_gdy (x[i] + prędkośćx[i] > pozycja_maksymalna_ściany) // odbicie od prawej
+	{
+		prędkośćx[i] = prędkośćx[i] * (utrata_energii) * -1.0;
+		prędkośćy[i] = prędkośćy[i] * utrata_energii;
+		liczba_całkowita g = pozycja_maksymalna_ściany + (prędkośćx[i] - (x[i] - pozycja_maksymalna_ściany)) - prędkośćx[i];
+		x[i] = g;
+	}
+	w_przypadku_gdy (x[i] + prędkośćx[i] < pozycja_minimalna_ściany) //odbicie od lewej
+	{
+		prędkośćx[i] = prędkośćx[i] * (utrata_energii) * -1.0;
+		prędkośćy[i] = prędkośćy[i] * utrata_energii;
+		liczba_całkowita g = pozycja_minimalna_ściany + (prędkośćx[i] - (x[i] - pozycja_minimalna_ściany)) - prędkośćx[i];
+		x[i] = g;
+	}
+}
+nic poruszoutside(liczba_całkowita i) // przesunięcie wylosowanej piłki 
+{
+	y[i]= pozycja_na_zewnatz +wielkość;
+	x[i]=pozycja_maksymalna_ściany+wielkość*4;
+	pozycja_na_zewnatz+=wielkość*6;
+	ilość_piłek++;
+}
+nic checkdlaoutside(liczba_całkowita i)// funkcja sprawdzająca czy piłeczka została wylosowana
+{
+	w_przypadku_gdy(y[i]<pozycja_minimalna_ściany&&(x[i]+prędkośćx[i])>(((pozycja_maksymalna_ściany + pozycja_minimalna_ściany)/2)-wielkość_otworu*wielkość)&&(x[i]+prędkośćx[i])<(((pozycja_maksymalna_ściany + pozycja_minimalna_ściany)/2)+wielkość_otworu*wielkość)&&w_przypadku_gdy_otwarte==1) 
+	{
+		zamróź[i]=1;
+		poruszoutside(i);
+	}
+}
+nic porusz()// funkcja ruszająca piłki
+{
+	dla(liczba_całkowita i = 0; i < n; i++) 
+	{
+		dla(liczba_całkowita j=0;j<4;j++)
+		{
+		w_przypadku_gdy(zamróź[i]==1) kontynuj;
+		odbicie_od_ściany(i);
+		w_przypadku_gdy (w_przypadku_gdy_dmuchawa == 1)
+		{
+			//y[i]+=1.0;		
+			dmuchawa(i);
+		}
+		checkdlacollisions(i);
+		w_przypadku_gdy(j==0){
+			prędkośćy[i] += grawitacja;
+			x[i] += prędkośćx[i];
+			y[i] += prędkośćy[i];
+			}
+		}
+	}
+
+	dla(liczba_całkowita i = 0; i < n; i++) 
+	{	
+		checkdlaoutside(i);
+	}
+}
+
+nic wyświetl()// funkcja wyświetlająca wszystkie elementy
+{
+	wypisz_tekst_na_kordynatach_x_oraz_y(20, pozycja_minimalna_ściany-100,"Po pierwszym kliknięciu kulki zostają uwolnione, po drugim odpala się dmuchawa, po trzecim otwiera się otwór do losowania piłeczek.");
+	wypisz_tekst_na_kordynatach_x_oraz_y(20, pozycja_minimalna_ściany-50,"Uwagi: 0(zero) i 8(osiem) na piłeczkach wyglądają bardzo podobnie, jeśli dmuchawa nie zostanie odpalona po 7.5 sekundy od uwolnienia piłeczek sama się odpali");
+	linia(pozycja_minimalna_ściany - wielkość, pozycja_maksymalna_ściany + wielkość, pozycja_maksymalna_ściany + wielkość, pozycja_maksymalna_ściany + wielkość);// DÓL
+	w_przypadku_gdy(w_przypadku_gdy_otwarte==0) linia(pozycja_minimalna_ściany - wielkość, pozycja_minimalna_ściany - wielkość, pozycja_maksymalna_ściany +wielkość, pozycja_minimalna_ściany-wielkość);// GÓRA// x1 y1 x2 y2
+	w_przeciwnym_razie
+	{
+		linia(pozycja_minimalna_ściany - wielkość, pozycja_minimalna_ściany - wielkość, ((pozycja_maksymalna_ściany + pozycja_minimalna_ściany)/2)-wielkość_otworu*wielkość, pozycja_minimalna_ściany-wielkość);//lewo góra
+		linia(((pozycja_maksymalna_ściany + pozycja_minimalna_ściany)/2)+wielkość_otworu*wielkość, pozycja_minimalna_ściany - wielkość, pozycja_maksymalna_ściany +wielkość, pozycja_minimalna_ściany-wielkość);//prawo góra
+	}
+	linia(pozycja_maksymalna_ściany + wielkość, pozycja_minimalna_ściany - wielkość, pozycja_maksymalna_ściany + wielkość, pozycja_maksymalna_ściany+wielkość); // PRAWO
+	linia(pozycja_minimalna_ściany - wielkość, pozycja_minimalna_ściany - wielkość, pozycja_minimalna_ściany - wielkość, pozycja_maksymalna_ściany + wielkość);//LEWO
+	dla(liczba_całkowita i = 0; i < n; i++) 
+	{
+		w_przypadku_gdy(!zamróź[i])	
+		{
+			koło(x[i], y[i], wielkość);
+			w_przypadku_gdy(i<=10) wypisz_tekst_na_kordynatach_x_oraz_y(x[i] - wielkość/3, y[i] - wielkość/3, liczba_całkowita_to_string(i+1));
+			w_przeciwnym_razie wypisz_tekst_na_kordynatach_x_oraz_y(x[i] - wielkość/1.5, y[i] - wielkość/1.5, liczba_całkowita_to_string(i+1));
+		}
+		w_przeciwnym_razie 
+		{
+			w_przypadku_gdy(i<=10) wypisz_tekst_na_kordynatach_x_oraz_y(x[i]-wielkość/4, y[i]-wielkość/4, liczba_całkowita_to_string(i+1));		
+			w_przeciwnym_razie wypisz_tekst_na_kordynatach_x_oraz_y(x[i] - wielkość/2, y[i] - wielkość/2, liczba_całkowita_to_string(i+1));
+			koło(x[i], y[i], 2*wielkość);
+		}
+	}
+}
+nic main()
+{
+	wylosuj_ziarno(time(NULL));
+	liczba_całkowita okno_wielkość=2000;
+	stwórz_pole_graficzne(okno_wielkość, okno_wielkość);
+	ustaw_port_widzenia(0, 0, okno_wielkość, okno_wielkość, 0);
+	wygeneruj_pozycje();
+	wyświetl();
+	liczba_całkowita j = 0;
+	liczba_całkowita dlug = 0;
+	liczba_całkowita sprawdzacz_fazy = 0;	
+	liczba_całkowita czasomierz=0;
+	w_chwili_gdy (animuj(100)) 
+	{	
+		w_przypadku_gdy(sprawdzacz_fazy!=0) 
+		{
+			czasomierz++;
+		}
+
+		w_przypadku_gdy(mousedown()||(czasomierz==750&&sprawdzacz_fazy==1)) 
+		{	
+			w_przypadku_gdy(sprawdzacz_fazy==0)
+			{
+				generateprędkość();
+				sprawdzacz_fazy++;
+			}
+			w_przeciwnym_razie w_przypadku_gdy(sprawdzacz_fazy==1)
+			{
+				w_przypadku_gdy_dmuchawa=1;
+				sprawdzacz_fazy++;
+			}
+			w_przeciwnym_razie w_przypadku_gdy_otwarte=1; 
+		}
+		wyczyść_port_widzenia();
+		wyświetl();
+		w_przypadku_gdy(sprawdzacz_fazy) porusz();
+		w_przypadku_gdy(ilość_piłek>=7) w_przypadku_gdy_otwarte=0;
+		w_przypadku_gdy(ilość_piłek==6) ilość_piłek++;
+	}
+}
