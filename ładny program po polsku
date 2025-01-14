@@ -45,7 +45,7 @@ liczba_zmiennoprzecinkowa utrata_energii = 0.80; // zachowanie energi //0.60 jes
 typ_logiczny zamróź[n]; //czy dane piłki zostały wylosowane
 liczba_całkowita pozycja_na_zewnatz=pozycja_minimalna_ściany; // pozycja piłek po wylosowaniu
 liczba_całkowita ilość_piłek=0; // ilośc wylosowanych piłek w losowaniu
-typ_logiczny checkdlaoverlap(liczba_całkowita i) // funkcja sprawdzająca czy piłka nachodzi na inną piłke, używana przy początkowym losowaniu piłek
+typ_logiczny sprawdz_dlaoverlap(liczba_całkowita i) // funkcja sprawdzająca czy piłka nachodzi na inną piłke, używana przy początkowym losowaniu piłek
 {
 	dla(liczba_całkowita j=0;j<i;j++)
 	{
@@ -85,16 +85,16 @@ nic odbij(liczba_całkowita i, liczba_całkowita j) // funkcja do odbijania pił
 	liczba_zmiennoprzecinkowa v2n = prędkośćx[j] * nx + prędkośćy[j] * ny;
 	liczba_zmiennoprzecinkowa v2t = prędkośćx[j] * tx + prędkośćy[j] * ty;
 	// Zamiana składowych normalnych między piłkami (zachowanie pędu)
-	liczba_zmiennoprzecinkowa v1n_new = v2n;
-	liczba_zmiennoprzecinkowa v2n_new = v1n;
+	liczba_zmiennoprzecinkowa v1n__nowy = v2n;
+	liczba_zmiennoprzecinkowa v2n__nowy = v1n;
 	// Składowe styczne pozostają bez zmian
-	liczba_zmiennoprzecinkowa v1t_new = v1t;
-	liczba_zmiennoprzecinkowa v2t_new = v2t;
+	liczba_zmiennoprzecinkowa v1t__nowy = v1t;
+	liczba_zmiennoprzecinkowa v2t__nowy = v2t;
 	// Przekształcenie nowych składowych z powrotem do układu globalnego
-	prędkośćx[i] = v1n_new * nx + v1t_new * tx;
-	prędkośćy[i] = v1n_new * ny + v1t_new * ty;
-	prędkośćx[j] = v2n_new * nx + v2t_new * tx;
-	prędkośćy[j] = v2n_new * ny + v2t_new * ty;
+	prędkośćx[i] = v1n__nowy * nx + v1t__nowy * tx;
+	prędkośćy[i] = v1n__nowy * ny + v1t__nowy * ty;
+	prędkośćx[j] = v2n__nowy * nx + v2t__nowy * tx;
+	prędkośćy[j] = v2n__nowy * ny + v2t__nowy * ty;
 	y[i]+=prędkośćy[i];
 	x[i]+=prędkośćx[i];
 	y[j]+=prędkośćy[j];
@@ -106,7 +106,7 @@ nic dmuchawa(liczba_całkowita i)
 	prędkośćx[i]+=((((pozycja_minimalna_ściany+pozycja_maksymalna_ściany)/2)-x[i]))/moc_dmuchawy;
 }
 
-typ_logiczny checkdlacollisions(liczba_całkowita i)
+typ_logiczny sprawdz_dla_odbić(liczba_całkowita i)
 {
 	liczba_całkowita odbicie_wystąpiło=0;
 	w_przypadku_gdy(zamróź[i]) zwróć 0;
@@ -142,7 +142,7 @@ nic wygeneruj_pozycje()// funkcja do generowania pozycji wszystkich piłek
 	dla(liczba_całkowita i = 0; i < n; i++)
 		{
 			wygeneruj_pojedyńczą_pozycje(i);
-			w_chwili_gdy(checkdlaoverlap(i))
+			w_chwili_gdy(sprawdz_dlaoverlap(i))
 			{
 				wygeneruj_pojedyńczą_pozycje(i);
 			}
@@ -192,19 +192,19 @@ nic odbicie_od_ściany(liczba_całkowita i)
 		x[i] = g;
 	}
 }
-nic poruszoutside(liczba_całkowita i) // przesunięcie wylosowanej piłki 
+nic porusz_poza_polem(liczba_całkowita i) // przesunięcie wylosowanej piłki 
 {
 	y[i]= pozycja_na_zewnatz +wielkość;
 	x[i]=pozycja_maksymalna_ściany+wielkość*4;
 	pozycja_na_zewnatz+=wielkość*6;
 	ilość_piłek++;
 }
-nic checkdlaoutside(liczba_całkowita i)// funkcja sprawdzająca czy piłeczka została wylosowana
+nic sprawdz_dla_poza_polem(liczba_całkowita i)// funkcja sprawdzająca czy piłeczka została wylosowana
 {
 	w_przypadku_gdy(y[i]<pozycja_minimalna_ściany&&(x[i]+prędkośćx[i])>(((pozycja_maksymalna_ściany + pozycja_minimalna_ściany)/2)-wielkość_otworu*wielkość)&&(x[i]+prędkośćx[i])<(((pozycja_maksymalna_ściany + pozycja_minimalna_ściany)/2)+wielkość_otworu*wielkość)&&w_przypadku_gdy_otwarte==1) 
 	{
 		zamróź[i]=1;
-		poruszoutside(i);
+		porusz_poza_polem(i);
 	}
 }
 nic porusz()// funkcja ruszająca piłki
@@ -220,7 +220,7 @@ nic porusz()// funkcja ruszająca piłki
 			//y[i]+=1.0;		
 			dmuchawa(i);
 		}
-		checkdlacollisions(i);
+		sprawdz_dla_odbić(i);
 		w_przypadku_gdy(j==0){
 			prędkośćy[i] += grawitacja;
 			x[i] += prędkośćx[i];
@@ -231,7 +231,7 @@ nic porusz()// funkcja ruszająca piłki
 
 	dla(liczba_całkowita i = 0; i < n; i++) 
 	{	
-		checkdlaoutside(i);
+		sprawdz_dla_poza_polem(i);
 	}
 }
 
